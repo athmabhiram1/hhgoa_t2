@@ -244,7 +244,7 @@ export default function App() {
       {tab === "graph" && <GraphPanel graph={graph} onLoad={loadGraph} />}
 
       <footer>
-        HH Goa 2026 · Task 2 · SARVAM-GRP-… <a href="https://github.com/your-team/vakrag">repo</a>
+        HH Goa 2026 · Task 2 · SARVAM-GRP-… <a href="https://github.com/athmabhiram1/hhgoa_t2">repo</a>
       </footer>
     </div>
   );

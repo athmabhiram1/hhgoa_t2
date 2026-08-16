@@ -22,6 +22,10 @@ CONTEXT.md). AuraDB Free is the retrieval store.
 - `entrypoint.sh` — starts Ollama, polls readiness (max 60s), execs uvicorn on
   `$PORT`. App pre-warms embeddings at startup so the first request is fast.
 - `requirements.txt` — request-path deps only.
+- `wheels/` — pre-fetched Linux wheels. **Intentional: built for cp311 (Python
+  3.11) to match the Dockerfile's `FROM python:3.11-slim` base — local dev runs
+  Python 3.12, but do NOT regenerate these against 3.12 or the Cloud Run build
+  breaks.**
 
 ## Build
 
