@@ -1,0 +1,226 @@
+{
+  "run_ts": "20260815-133028",
+  "eval_pool": "all",
+  "topk": 10,
+  "n_index_queries": 21420,
+  "n_holdout": 350,
+  "n_recurring_passages": 342,
+  "n_held_out_eligible": 0,
+  "metrics": {
+    "in_index_mrr": {
+      "namespace": "passage_natural",
+      "leaky": false,
+      "n": 12922,
+      "gold_found_top10": 7051,
+      "overall": {
+        "n": 12922,
+        "mrr10": 0.298,
+        "recall10": 0.5457,
+        "ndcg10": 0.3565
+      },
+      "by_lang": {
+        "as": {
+          "n": 923,
+          "mrr10": 0.2523,
+          "recall10": 0.4713,
+          "ndcg10": 0.3033
+        },
+        "bn": {
+          "n": 923,
+          "mrr10": 0.2475,
+          "recall10": 0.4605,
+          "ndcg10": 0.2964
+        },
+        "gu": {
+          "n": 923,
+          "mrr10": 0.2794,
+          "recall10": 0.4821,
+          "ndcg10": 0.3269
+        },
+        "hi": {
+          "n": 923,
+          "mrr10": 0.3617,
+          "recall10": 0.6674,
+          "ndcg10": 0.4351
+        },
+        "kn": {
+          "n": 923,
+          "mrr10": 0.2782,
+          "recall10": 0.506,
+          "ndcg10": 0.3321
+        },
+        "ml": {
+          "n": 923,
+          "mrr10": 0.3049,
+          "recall10": 0.52,
+          "ndcg10": 0.3556
+        },
+        "mr": {
+          "n": 923,
+          "mrr10": 0.3123,
+          "recall10": 0.5807,
+          "ndcg10": 0.3766
+        },
+        "ne": {
+          "n": 923,
+          "mrr10": 0.3165,
+          "recall10": 0.6024,
+          "ndcg10": 0.384
+        },
+        "or": {
+          "n": 923,
+          "mrr10": 0.2714,
+          "recall10": 0.4843,
+          "ndcg10": 0.3214
+        },
+        "pa": {
+          "n": 923,
+          "mrr10": 0.2747,
+          "recall10": 0.507,
+          "ndcg10": 0.3282
+        },
+        "sa": {
+          "n": 923,
+          "mrr10": 0.2826,
+          "recall10": 0.532,
+          "ndcg10": 0.3423
+        },
+        "ta": {
+          "n": 923,
+          "mrr10": 0.2661,
+          "recall10": 0.4908,
+          "ndcg10": 0.3185
+        },
+        "te": {
+          "n": 923,
+          "mrr10": 0.3442,
+          "recall10": 0.636,
+          "ndcg10": 0.4132
+        },
+        "ur": {
+          "n": 923,
+          "mrr10": 0.3802,
+          "recall10": 0.6988,
+          "ndcg10": 0.4568
+        }
+      }
+    },
+    "query_anchored_mrr": {
+      "namespace": "query_anchored",
+      "leaky": true,
+      "n": 12922,
+      "gold_found_top10": 1298,
+      "overall": {
+        "n": 12922,
+        "mrr10": 0.045,
+        "recall10": 0.1004,
+        "ndcg10": 0.0578
+      },
+      "by_lang": {
+        "as": {
+          "n": 923,
+          "mrr10": 0.0435,
+          "recall10": 0.0899,
+          "ndcg10": 0.0542
+        },
+        "bn": {
+          "n": 923,
+          "mrr10": 0.0401,
+          "recall10": 0.0964,
+          "ndcg10": 0.053
+        },
+        "gu": {
+          "n": 923,
+          "mrr10": 0.0481,
+          "recall10": 0.0953,
+          "ndcg10": 0.0587
+        },
+        "hi": {
+          "n": 923,
+          "mrr10": 0.0511,
+          "recall10": 0.1073,
+          "ndcg10": 0.0639
+        },
+        "kn": {
+          "n": 923,
+          "mrr10": 0.0471,
+          "recall10": 0.0997,
+          "ndcg10": 0.0596
+        },
+        "ml": {
+          "n": 923,
+          "mrr10": 0.0458,
+          "recall10": 0.0986,
+          "ndcg10": 0.0572
+        },
+        "mr": {
+          "n": 923,
+          "mrr10": 0.05,
+          "recall10": 0.1094,
+          "ndcg10": 0.0644
+        },
+        "ne": {
+          "n": 923,
+          "mrr10": 0.0482,
+          "recall10": 0.1029,
+          "ndcg10": 0.0607
+        },
+        "or": {
+          "n": 923,
+          "mrr10": 0.0382,
+          "recall10": 0.0943,
+          "ndcg10": 0.0509
+        },
+        "pa": {
+          "n": 923,
+          "mrr10": 0.0395,
+          "recall10": 0.0986,
+          "ndcg10": 0.0529
+        },
+        "sa": {
+          "n": 923,
+          "mrr10": 0.0455,
+          "recall10": 0.1073,
+          "ndcg10": 0.06
+        },
+        "ta": {
+          "n": 923,
+          "mrr10": 0.0401,
+          "recall10": 0.0943,
+          "ndcg10": 0.0522
+        },
+        "te": {
+          "n": 923,
+          "mrr10": 0.0428,
+          "recall10": 0.1008,
+          "ndcg10": 0.0569
+        },
+        "ur": {
+          "n": 923,
+          "mrr10": 0.0497,
+          "recall10": 0.1116,
+          "ndcg10": 0.0643
+        }
+      },
+      "note": "POOL-SIZE MISMATCH: the query_anchored namespace holds ONLY the curated subset (28,518 chunks; 204 distinct query_ids per language), NOT the full sample pool (213,928 chunks; 1,530 distinct query_ids). Gold passages from the full sample are largely absent from this smaller pool, so scores here are both leaky (query+passage embedded together) AND measured against a non-representative pool. Do not compare with in_index_mrr."
+    },
+    "held_out_mrr": {
+      "namespace": "passage_natural",
+      "leaky": false,
+      "n": 0,
+      "gold_in_pool": 0,
+      "coverage": 0.0,
+      "overall": {
+        "n": 0,
+        "mrr10": "[not measured]",
+        "recall10": "[not measured]",
+        "ndcg10": "[not measured]"
+      },
+      "by_lang": {},
+      "note": "true unseen-query eval; gold-in-pool by recurrence construction",
+      "mrr10": "[not measured]",
+      "recall10": "[not measured]",
+      "ndcg10": "[not measured]"
+    }
+  }
+}

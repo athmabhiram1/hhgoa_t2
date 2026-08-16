@@ -1,0 +1,48 @@
+# Environments
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+uv.lock
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Local model weights & ONNX artifacts
+models/
+backend/models/
+
+# Dataset caches / sampled data
+backend/data/
+data/
+
+# Benchmarks & telemetry exports
+benchmarks/
+*.parquet
+*.jsonl
+
+# Neo4j import/export dumps
+*.dump
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Secrets — never commit
+*.pem
+*.key
+service-account*.json

@@ -1,0 +1,50 @@
+{
+  "run_ts": "20260814-172132",
+  "eval_pool": "passage_natural",
+  "topk": 10,
+  "n_index_queries": 20,
+  "n_holdout": 350,
+  "n_recurring_passages": 0,
+  "n_held_out_eligible": 0,
+  "metrics": {
+    "in_index_mrr": {
+      "namespace": "passage_natural",
+      "leaky": false,
+      "n": 6,
+      "gold_in_pool": 5,
+      "coverage": 0.8333,
+      "overall": {
+        "n": 6,
+        "mrr10": 0.496,
+        "recall10": 0.8333,
+        "ndcg10": 0.5759
+      },
+      "by_lang": {
+        "as": {
+          "n": 6,
+          "mrr10": 0.496,
+          "recall10": 0.8333,
+          "ndcg10": 0.5759
+        }
+      }
+    },
+    "held_out_mrr": {
+      "namespace": "passage_natural",
+      "leaky": false,
+      "n": 0,
+      "gold_in_pool": 0,
+      "coverage": 0.0,
+      "overall": {
+        "n": 0,
+        "mrr10": 0.0,
+        "recall10": 0.0,
+        "ndcg10": 0.0
+      },
+      "by_lang": {},
+      "note": "true unseen-query eval; gold-in-pool by recurrence construction",
+      "mrr10": "[not measured]",
+      "recall10": "[not measured]",
+      "ndcg10": "[not measured]"
+    }
+  }
+}

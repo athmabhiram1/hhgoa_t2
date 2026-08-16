@@ -1,0 +1,48 @@
+{
+  "run_ts": "20260814-165016",
+  "n_queries": 5,
+  "topk": 10,
+  "rerank": false,
+  "instruction": false,
+  "lang_filter": false,
+  "configs": {
+    "fused:passage_natural": {
+      "overall": {
+        "n": 3,
+        "mrr10": 0.0,
+        "recall10": 0.0,
+        "ndcg10": 0.0
+      },
+      "n_total": 5,
+      "coverage": 0.0,
+      "pool": {},
+      "by_lang": {
+        "as": {
+          "n": 3,
+          "mrr10": 0.0,
+          "recall10": 0.0,
+          "ndcg10": 0.0
+        }
+      }
+    },
+    "single:passage_natural": {
+      "overall": {
+        "n": 3,
+        "mrr10": 0.0,
+        "recall10": 0.0,
+        "ndcg10": 0.0
+      },
+      "n_total": 5,
+      "coverage": 0.0,
+      "pool": {},
+      "by_lang": {
+        "as": {
+          "n": 3,
+          "mrr10": 0.0,
+          "recall10": 0.0,
+          "ndcg10": 0.0
+        }
+      }
+    }
+  }
+}
