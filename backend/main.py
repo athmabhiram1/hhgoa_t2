@@ -31,6 +31,7 @@ from .harness.benchmark import BenchmarkRunner
 from .harness.pipeline import VakRagPipeline
 from .harness.telemetry import tracker
 from .retrieval.embeddings import EmbeddingService, set_embedding_service
+from .retrieval.local_index import LocalFastIndex
 from .retrieval.neo4j_store import Neo4jStore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -46,6 +47,7 @@ class AppState:
     store: Neo4jStore | None = None
     client: LLMClient | None = None
     embeddings_ready: bool = False
+    fast_ready: bool = False
 
 
 state = AppState()
@@ -61,6 +63,29 @@ async def lifespan(app: FastAPI):
         # Warm the embedding model at startup (downloads on first use).
         await asyncio.to_thread(_init_embeddings)
         asyncio.create_task(pipeline.deep.initialize())
+        # Fast path (Tier 1): load the prebuilt local index when present.
+        fast = LocalFastIndex(cfg)
+        if cfg.fast_path_enabled and fast.load():
+            # Warm the bge-m3 model + CUDA kernels on startup so the first
+            # user query does not pay the cold-start cost (CUDA kernel compile
+            # / cuDNN autotune ≈ 800ms on first encode, then ~25ms warm).
+            # Fire one throwaway query through index.search() before marking
+            # ready — discard result, log warm-up duration separately from
+            # steady-state latency.
+            import time as _time
+
+            await asyncio.to_thread(fast._load_model)  # type: ignore[attr-defined]
+            _t0 = _time.perf_counter()
+            try:
+                await asyncio.to_thread(fast.search, "warmup")  # type: ignore[arg-type]
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("fast path warmup query failed: %s", exc)
+            else:
+                _warm_ms = (_time.perf_counter() - _t0) * 1000
+                logger.info("fast-path: warm-up query took %.1fms (discarded)", _warm_ms)
+            pipeline.bind_fast_path(fast)
+            state.fast_ready = True
+            logger.info("VakRAG fast path ready: %d local chunks (200ms-compliant)", fast.size)
         state.pipeline = pipeline
         state.store = store
         state.client = client
@@ -89,13 +114,18 @@ def _init_embeddings() -> None:
 
 
 app = FastAPI(title="VakRAG", version="0.1.0", lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+_cors_origins = [o.strip() for o in cfg.cors_origins.split(",") if o.strip()]
+if _cors_origins:
+    # Locked Aug 2026: same-origin by default (nginx proxies /v1/ to uvicorn).
+    # CORS is only enabled with an explicit allowlist; "*" is rejected here so
+    # a misconfigured env var can't open the app to any origin.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
 
 
 # --------------------------------------------------------------------------
@@ -130,7 +160,7 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-async def _run_and_track(pipe: VakRagPipeline, request: AskRequest, *, on_embed_queued=None) -> PipelineResult:
+async def _run_and_track(pipe: VakRagPipeline, request: AskRequest, *, on_embed_queued=None, on_fast=None) -> PipelineResult:
     if request.audio_b64:
         try:
             audio = base64.b64decode(request.audio_b64)
@@ -138,7 +168,7 @@ async def _run_and_track(pipe: VakRagPipeline, request: AskRequest, *, on_embed_
             raise HTTPException(status_code=400, detail="invalid base64 audio")
         result = await pipe.run_audio(audio)
     elif request.text:
-        result = await pipe.run_transcript(request.text, lang=request.lang, mode=request.mode, query_type=request.query_type, on_embed_queued=on_embed_queued)
+        result = await pipe.run_transcript(request.text, lang=request.lang, mode=request.mode, query_type=request.query_type, on_embed_queued=on_embed_queued, on_fast=on_fast)
     else:
         raise HTTPException(status_code=400, detail="provide text or audio_b64")
     tracker.record(result.total_ms, result.spans, refused=result.answer.mode == "refusal")
@@ -163,7 +193,21 @@ async def ask_stream(request: AskRequest) -> StreamingResponse:
         async def on_embed_queued() -> None:
             await live.put(_sse("queued", {"stage": "embed", "message": "request queued behind other queries"}))
 
-        task = asyncio.create_task(_run_and_track(pipe, request, on_embed_queued=on_embed_queued))
+        async def on_fast(answer, retrieval) -> None:
+            await live.put(
+                _sse(
+                    "quick",
+                    {
+                        "text": answer.text,
+                        "mode": answer.mode,
+                        "grounding_score": retrieval.grounding_score,
+                        "latency_ms": retrieval.latency_ms,
+                        "refusal_reason": answer.refusal_reason,
+                    },
+                )
+            )
+
+        task = asyncio.create_task(_run_and_track(pipe, request, on_embed_queued=on_embed_queued, on_fast=on_fast))
 
         while not task.done() or not live.empty():
             try:
@@ -224,7 +268,7 @@ async def ask_text(request: AskRequest) -> dict:
 @app.get("/v1/health")
 async def health() -> dict:
     neo4j_ok = bool(state.store) and await state.store.verify_connectivity() if state.store else False
-    return {"status": "ok" if neo4j_ok else "degraded", "neo4j": neo4j_ok, "embeddings": state.embeddings_ready, "provider_chain": cfg.primary_llm_provider}
+    return {"status": "ok" if neo4j_ok else "degraded", "neo4j": neo4j_ok, "embeddings": state.embeddings_ready, "fast_path": state.fast_ready, "provider_chain": cfg.primary_llm_provider}
 
 
 @app.get("/v1/telemetry")
@@ -234,6 +278,12 @@ async def telemetry() -> dict:
 
 @app.post("/v1/benchmark")
 async def benchmark(body: BenchmarkRequest) -> dict:
+    # Locked Aug 2026: /v1/benchmark is a credit-burning, load-generating
+    # endpoint. On a public deployment it must be off; it is only reachable
+    # when BENCHMARK_ENABLED=true (local dev). The CLI harness
+    # (python -m backend.harness.benchmark) is the intended path for real runs.
+    if not cfg.benchmark_enabled:
+        raise HTTPException(status_code=403, detail="benchmark endpoint disabled — enable with BENCHMARK_ENABLED=true (local dev only)")
     pipe = _require_ready()
     from .ingestion.dataset import load_sample
     from pathlib import Path

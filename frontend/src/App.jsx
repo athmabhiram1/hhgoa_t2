@@ -9,6 +9,7 @@ export default function App() {
   const [mode, setMode] = useState("auto");
   const [stages, setStages] = useState([]);
   const [answer, setAnswer] = useState(null);
+  const [quickAnswer, setQuickAnswer] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [requestId, setRequestId] = useState(null);
   const [totalMs, setTotalMs] = useState(null);
@@ -39,6 +40,7 @@ export default function App() {
   // ---- request lifecycle --------------------------------------------------
   const handleEvent = useCallback((event, data) => {
     setStages((prev) => [...prev, { event, data, t: Date.now() }]);
+    if (event === "quick") setQuickAnswer(data);
     if (event === "retrieval") setCandidates(data.candidates || []);
     if (event === "answer") setAnswer(data);
     if (event === "done") {
@@ -54,9 +56,11 @@ export default function App() {
       setBusy(true);
       setStages([]);
       setAnswer(null);
+      setQuickAnswer(null);
       setCandidates([]);
       setRequestId(null);
       setTotalMs(null);
+      setMicError("");
       abortRef.current = new AbortController();
       try {
         await askSSE({
@@ -137,6 +141,16 @@ export default function App() {
     if (tab === "graph") loadGraph();
   }, [tab, loadGraph]);
 
+  // voice flow labels for progressive stages
+  const flowSteps = [
+    { key: "transcript", label: "transcribing" },
+    { key: "intent", label: "routing" },
+    { key: "retrieval", label: "retrieving" },
+    { key: "grounding", label: "grounding" },
+    { key: "answer", label: "generating" },
+  ];
+  const activeStage = stages.length ? stages[stages.length - 1].event : null;
+
   return (
     <div className="app">
       <header>
@@ -144,6 +158,30 @@ export default function App() {
         <span className="sub">Voice-enabled Indic-language RAG · MSMARCO-XI</span>
         <span className={`health health-${health.status}`}>{health.status}</span>
       </header>
+
+      <section className="hero">
+        <div className="hero-left">
+          <h2>Speak in any of 14 Indic languages — get a grounded answer in &lt;200ms</h2>
+          <p>Local bge-m3 ANN (31,259 passages, 42–55ms P50) streams the extractive answer first; Vertex + Neo4j + RRF + LLM streams the full grounded answer after. Guardrails know when <em>not</em> to answer.</p>
+          <div className="hero-badges">
+            <span className="badge">14 languages</span>
+            <span className="badge">Sarvam STT → Whisper fallback</span>
+            <span className="badge">P50 45ms · P70 50ms · P100 80ms (70-query bench)</span>
+            <span className="badge">31,259 local passages</span>
+          </div>
+        </div>
+        <div className="hero-right">
+          <div className="hero-card">
+            <b>How it works</b>
+            <ol>
+              <li>Voice → Sarvam STT</li>
+              <li>Local ANN → extractive span (200ms-compliant)</li>
+              <li>Vertex/Neo4j RRF → grounding → LLM (progressive)</li>
+            </ol>
+            <span className="muted">Try: “किस राज्य की राजधानी मुंबई है” · “what is the capital of maharashtra”</span>
+          </div>
+        </div>
+      </section>
 
       <nav>
         <button className={tab === "ask" ? "active" : ""} onClick={() => setTab("ask")}>Ask</button>
@@ -187,8 +225,33 @@ export default function App() {
           </div>
           {micError && <p className="error">{micError}</p>}
 
+          {busy && (
+            <div className="voice-flow">
+              {flowSteps.map((s, i) => {
+                const done = stages.some((x) => x.event === s.key || x.event === "quick" || x.event === "retrieval");
+                const isActive = activeStage === s.key;
+                return (
+                  <span key={s.key} className={`flow-step ${done ? "done" : ""} ${isActive ? "active" : ""}`}>
+                    {isActive ? "● " : done ? "✓ " : "○ "}{s.label}
+                  </span>
+                );
+              })}
+              <span className="flow-busy">● streaming…</span>
+            </div>
+          )}
+
+          {quickAnswer && (
+            <div className="answer-card quick-card">
+              <div className="quick-head"><span className="badge-fast">⚡ Quick answer — {quickAnswer.latency_ms}ms (200ms-compliant, local bge-m3)</span> <span className="muted">grounding {quickAnswer.grounding_score?.toFixed(2)}</span></div>
+              <p className="answer-text">{quickAnswer.text}</p>
+              {quickAnswer.refusal_reason && <span className="badge-refusal">refusal: {quickAnswer.refusal_reason}</span>}
+              <p className="muted">Streaming — full grounded answer follows…</p>
+            </div>
+          )}
+
           {answer && (
-            <div className="answer-card">
+            <div className={`answer-card ${quickAnswer ? "full-card" : ""}`}>
+              <div className="answer-head"><b>{quickAnswer ? "Full answer (progressive)" : "Answer"}</b> <span className="muted">· {totalMs != null ? `${totalMs}ms total` : ""}</span></div>
               <p className="answer-text">{answer.text}</p>
               <div className="answer-meta">
                 <span>mode: {answer.mode}</span>

@@ -12,13 +12,27 @@ from collections import OrderedDict
 from ..core.models import RetrievedPassage
 
 
-def rrf_fuse(lists: list[list[RetrievedPassage]], *, k: int = 60, topk: int | None = None) -> list[RetrievedPassage]:
-    """Merge ranked lists; each list must be pre-sorted best-first."""
+def rrf_fuse(
+    lists: list[list[RetrievedPassage]],
+    *,
+    k: int = 60,
+    topk: int | None = None,
+    weights: list[float] | None = None,
+) -> list[RetrievedPassage]:
+    """Merge ranked lists; each list must be pre-sorted best-first.
+
+    `weights` gives a per-list RRF weight (default None = 1.0 for every list,
+    the historical behavior). Contribution of an item is w/(k+rank).
+    """
+    if weights is None:
+        weights = [1.0] * len(lists)
+    if len(weights) != len(lists):
+        raise ValueError("weights length must equal number of lists")
     scores: dict[str, float] = {}
     best: dict[str, RetrievedPassage] = {}
-    for ranked in lists:
+    for w, ranked in zip(weights, lists):
         for rank, item in enumerate(ranked, start=1):
-            scores[item.id] = scores.get(item.id, 0.0) + 1.0 / (k + rank)
+            scores[item.id] = scores.get(item.id, 0.0) + w / (k + rank)
             if item.id not in best or item.score > best[item.id].score:
                 best[item.id] = item
     ordered = OrderedDict(sorted(scores.items(), key=lambda kv: kv[1], reverse=True))

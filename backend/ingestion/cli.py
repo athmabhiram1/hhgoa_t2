@@ -47,7 +47,31 @@ async def _do_index(cfg, args) -> None:
         queries = kept
     store = Neo4jStore(cfg)
     try:
-        counts = await index_sample(queries, store, cfg, namespaces=args.namespaces, limit_passages=args.limit_passages)
+        if args.progressive:
+            from .indexer import progressive_index
+            report = await progressive_index(
+                queries, store, cfg,
+                gate_batch=args.gate_batch or cfg.index_gate_batch,
+                gate_threshold=args.gate_threshold if args.gate_threshold is not None else cfg.index_gate_threshold,
+                namespaces=args.namespaces,
+                force=args.force,
+                limit_passages=args.limit_passages,
+            )
+            passed = bool(report.get("gate", {}).get("passed"))
+            logger.info("Progressive index gate %s: Recall@10 %.3f vs %.3f (MRR@10 %.3f, nDCG@10 %.3f, pilot %d queries)",
+                        "PASSED" if passed else "FAILED",
+                        report.get("recall10", 0.0),
+                        report.get("gate_threshold", 0.0),
+                        report.get("mrr10", 0.0),
+                        report.get("ndcg10", 0.0),
+                        report.get("pilot_queries", 0))
+            if passed:
+                logger.info("Index stats: %s", report.get("final_counts", {}))
+            else:
+                logger.error("GATE FAILED — index stopped. See eval/gate_*.json and the improvement hints above.")
+                raise SystemExit(2)
+            return
+        counts = await index_sample(queries, store, cfg, namespaces=args.namespaces, force=args.force, limit_passages=args.limit_passages)
         logger.info("Index stats: %s", counts)
     finally:
         await store.close()
@@ -62,6 +86,10 @@ def main() -> None:
     parser.add_argument("--limit-passages", type=int, default=None, help="Cap passages per query (fast iteration)")
     parser.add_argument("--namespaces", nargs="*", default=None, help="Chunk namespaces to index (default: all six)")
     parser.add_argument("--queries-per-lang", type=int, default=None, help="Curated deploy subset: cap queries per language")
+    parser.add_argument("--progressive", action="store_true", help="Index a small pilot, eval Recall@10 vs gold, only continue if the gate passes")
+    parser.add_argument("--gate-batch", type=int, default=None, help="Pilot queries per language for the progressive gate (default: cfg.index_gate_batch)")
+    parser.add_argument("--gate-threshold", type=float, default=None, help="Recall@10 floor to continue the full index (default: cfg.index_gate_threshold)")
+    parser.add_argument("--force", action="store_true", help="Re-embed everything, overwriting existing vectors (e.g. after a backend switch)")
     args = parser.parse_args()
 
     cfg = get_settings()

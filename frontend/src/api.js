@@ -1,4 +1,7 @@
 // API client: SSE streaming for /v1/ask + JSON endpoints.
+// VITE_API_URL is set on Vercel to the Render backend URL (e.g. https://vakrag.onrender.com).
+// Local dev: leave unset → uses vite proxy to localhost:8000. Single-container Render: same-origin → "".
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export async function askSSE({ text, audioB64, lang, mode, onEvent, signal }) {
   const body = {};
@@ -7,7 +10,7 @@ export async function askSSE({ text, audioB64, lang, mode, onEvent, signal }) {
   if (lang) body.lang = lang;
   if (mode) body.mode = mode;
 
-  const res = await fetch("/v1/ask", {
+  const res = await fetch(`${API_BASE}/v1/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -44,20 +47,20 @@ export async function askSSE({ text, audioB64, lang, mode, onEvent, signal }) {
 }
 
 export async function getTelemetry() {
-  const res = await fetch("/v1/telemetry");
+  const res = await fetch(`${API_BASE}/v1/telemetry`);
   if (!res.ok) throw new Error("telemetry unavailable");
   return res.json();
 }
 
 export async function getGraph() {
-  const res = await fetch("/v1/graph");
+  const res = await fetch(`${API_BASE}/v1/graph`);
   if (!res.ok) throw new Error("graph unavailable");
   return res.json();
 }
 
 export async function getHealth() {
   try {
-    const res = await fetch("/v1/health");
+    const res = await fetch(`${API_BASE}/v1/health`);
     return res.ok ? await res.json() : { status: "degraded" };
   } catch {
     return { status: "down" };

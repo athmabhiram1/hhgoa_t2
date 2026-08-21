@@ -46,3 +46,7 @@ Thumbs.db
 *.pem
 *.key
 service-account*.json
+# GCP service-account keys can land as project-<id>-<random>.json
+project-*.json
+*-sa-key*.json
+gcp*.json

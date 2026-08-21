@@ -60,6 +60,9 @@ class RetrievedPassage(BaseModel):
     text: str
     language_code: LanguageCode = ""
     score: float = 0.0
+    raw_cosine: float | None = None   # raw vector cosine captured at retrieval
+    # time (source == "vector") BEFORE rrf_fuse mutates `score` in place. The
+    # 0.78 grounding gate must read THIS, not the post-fusion RRF rank score.
     rerank_score: float | None = None
     source: str = "vector"            # vector | bm25 | graph | hybrid
     query_id: str | None = None

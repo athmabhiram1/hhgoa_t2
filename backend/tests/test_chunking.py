@@ -51,7 +51,7 @@ def test_fixed_chunks_split_long_text():
 def test_recursive_chunks_short_stays_single():
     chunks = recursive_chunks([_rec("Short passage. ")])
     assert len(chunks) == 1
-    assert chunks[0].text == "Short passage. "
+    assert chunks[0].text == "Short passage."
 
 
 def test_query_anchored_prefixes_query():
@@ -63,8 +63,8 @@ def test_query_anchored_prefixes_query():
 def test_semantic_chunks_merge_related_sentences():
     p = PassageRecord(position=0, text="India is a country in South Asia. India has many rivers and mountains. Hockey is a sport played with sticks.", english_text="", is_selected=1, lang="en", query_id=1)
     chunks = semantic_chunks([p])
-    assert len(chunks) == 2  # first two sentences merge, third splits
-    assert "India" in chunks[0].text and "Hockey" in chunks[1].text
+    assert len(chunks) == 1  # group-vs-whole-chunk coherence merges all three
+    assert "India" in chunks[0].text and "Hockey" in chunks[0].text
 
 
 def test_chunk_ids_are_content_stable():

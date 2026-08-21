@@ -133,7 +133,15 @@ class EvalRunner:
             vk, bk = self.cfg.retrieval_vector_k, self.cfg.retrieval_bm25_k
             vector = await self.store.vector_search(namespace, vec, vk, lang=lang)
             bm25 = await self.store.bm25_search(namespace, query, bk, lang=lang)
-            self._cache[key] = dedupe(rrf_fuse([vector, bm25], k=self.cfg.retrieval_rrf_k, topk=self.cfg.retrieval_fusion_topk), by_lang=True)
+            self._cache[key] = dedupe(
+                rrf_fuse(
+                    [vector, bm25],
+                    k=self.cfg.retrieval_rrf_k,
+                    topk=self.cfg.retrieval_fusion_topk,
+                    weights=[self.cfg.retrieval_vector_weight, self.cfg.retrieval_bm25_weight],
+                ),
+                by_lang=True,
+            )
         return self._cache[key][: self.topk]
 
     async def eval_queries(self, queries: list[QueryRecord], namespace: str) -> dict:

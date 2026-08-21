@@ -103,14 +103,26 @@ class RetrievalService:
         breakdown["search_ms"] = int((time.perf_counter() - start) * 1000) - breakdown.get("embed_ms", 0)
 
         with span("retrieve.fuse"):
-            fused = rrf_fuse(vector_lists + bm25_lists, k=self.cfg.retrieval_rrf_k, topk=self.cfg.retrieval_fusion_topk)
+            fused = rrf_fuse(
+                vector_lists + bm25_lists,
+                k=self.cfg.retrieval_rrf_k,
+                topk=self.cfg.retrieval_fusion_topk,
+                weights=[self.cfg.retrieval_vector_weight] * len(vector_lists)
+                + [self.cfg.retrieval_bm25_weight] * len(bm25_lists),
+            )
             fused = dedupe(fused, by_lang=True)
 
         # Grounding uses the best raw vector cosine from the vector arm.
         # Calibrated on qwen3-embedding cosine scale (threshold 0.78, see
         # CONTEXT.md) — NOT the RRF rank score (which maxes ~0.03) and NOT
         # BM25 (unbounded, and inverted for out-of-domain queries).
-        grounding = max((c.score for lst in vector_lists for c in lst), default=0.0)
+        #
+        # raw_cosine is captured at retrieval time (source == "vector") BEFORE
+        # rrf_fuse mutates `score` in place (fusion.py:43). Reading the mutated
+        # score here was the grounding-timing bug: when every candidate survives
+        # the fused top-k, `score` holds the RRF rank value (~0.016) instead of
+        # the true cosine (~0.80), spuriously refusing queries at the 0.78 gate.
+        grounding = max((c.raw_cosine or 0.0 for lst in vector_lists for c in lst), default=0.0)
 
         if self.reranker is not None and fused:
             with span("retrieve.rerank"):

@@ -1,0 +1,58 @@
+# VakRAG — Render blueprint (free tier).
+# Single web service: nginx serves the built frontend and proxies /v1/ to
+# uvicorn inside the same container. Neo4j = AuraDB (cloud), embeddings =
+# Gemini API, generation = Gemini, STT = Sarvam — all configured via env vars.
+#
+# Deploy: `render blueprint launch` from the repo root, then set the secret
+# env vars (NEO4J_PASSWORD, GEMINI_API_KEY, SARVAM_API_KEY) in the dashboard.
+
+services:
+  - type: web
+    name: vakrag
+    runtime: docker
+    repo: https://github.com/athmabhiram1/hhgoa_t2
+    plan: free
+    region: oregon
+    autoDeploy: true
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /v1/health
+    envVars:
+      # --- Neo4j (AuraDB) ---
+      - key: NEO4J_URI
+        value: neo4j+s://c551c599.databases.neo4j.io
+      - key: NEO4J_USERNAME
+        value: c551c599
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: NEO4J_DATABASE
+        value: c551c599
+      # --- Embeddings (Gemini API — free-tier quota, NOT GCP credit) ---
+      # Locked Aug 2026: deploy embedder is Gemini API `gemini-embedding-001`
+      # via `EMBED_BACKEND=gemini` (batchEmbedContents, 100/batch). See
+      # deployment-plan.md §2 for rationale (Render has no GCP metadata server,
+      # org policy blocks SA-key creation, Gemini API vectors are byte-identical
+      # to Vertex RETRIEVAL_QUERY). Set GEMINI_API_KEY in dashboard (sync:false).
+      - key: EMBED_BACKEND
+        value: gemini
+      - key: GEMINI_EMBED_DIM
+        value: "1024"
+      - key: GEMINI_EMBED_BATCH_SIZE
+        value: "100"
+      # --- Generation (Gemini API) ---
+      - key: PRIMARY_LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      # --- STT (Sarvam) ---
+      - key: STT_PROVIDER
+        value: sarvam
+      # --- Deploy hardening (Locked Aug 2026) ---
+      # /v1/benchmark is credit-burning and stays OFF in production.
+      - key: BENCHMARK_ENABLED
+        value: "false"
+      # --- Secrets (set in dashboard) ---
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false

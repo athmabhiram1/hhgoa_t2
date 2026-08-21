@@ -25,6 +25,16 @@
 ## Commands
 - Backend dev: `uvicorn backend.main:app --reload --port 8000` (from repo root)
 - Index the dataset: `python -m backend.ingestion.cli --sample --index`
+- Index with the **progressive quality gate** (LOCKED workflow — never index the
+  whole corpus in one shot): pilot → golden-set Recall@10 eval → continue only
+  on pass. On gate failure the CLI stops with `SystemExit(2)` and an
+  `eval/gate_<ts>.json` report — improve (chunking / embed backend / threshold),
+  never `--force` a failing index.
+  ```
+  python -m backend.ingestion.cli --index --progressive \
+    --gate-batch 8 --gate-threshold 0.40 \
+    --queries-per-lang 204 --namespaces passage_natural query_anchored passage_en
+  ```
 - Run latency benchmark: `python -m backend.harness.benchmark`
 - Frontend dev: `cd frontend && npm run dev` (Vite, port 5173)
 
@@ -46,4 +56,10 @@ backend/
 - `python -m compileall backend` — syntax gate.
 - Targeted stage tests exist under `backend/tests/`; run with pytest when present.
 - If you changed the request path, update the latency budget table in CONTEXT.md.
-- Never commit without being asked.
+- **Never commit without being asked.**
+- **Deploy must-haves (locked Aug 2026):** the progressive gate is the ONLY way
+  to run a full `--index`; `client_max_body_size 8M` MUST exist in
+  `deploy/render/nginx.conf.template` (currently missing — 4MB audio → 413); the
+  daytime keep-alive MUST keep pinging `/v1/health` (it verifies Neo4j
+  connectivity, which keeps AuraDB Free alive past its 72h auto-pause and
+  30–90-day deletion windows).
